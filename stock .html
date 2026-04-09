@@ -1,0 +1,157 @@
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+
+// Simple localStorage "database"
+const DB_KEY = "stock_app_data_v1";
+
+export default function StockControlApp() {
+  const [user, setUser] = useState(null);
+  const [items, setItems] = useState([]);
+  const [name, setName] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [category, setCategory] = useState("General");
+  const [search, setSearch] = useState("");
+
+  // Load from DB
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem(DB_KEY));
+    if (saved) setItems(saved);
+  }, []);
+
+  // Save to DB
+  useEffect(() => {
+    localStorage.setItem(DB_KEY, JSON.stringify(items));
+  }, [items]);
+
+  const login = () => {
+    if (!user) setUser("Admin");
+  };
+
+  const logout = () => setUser(null);
+
+  const addItem = () => {
+    if (!name || !quantity) return;
+    setItems([
+      ...items,
+      {
+        name,
+        quantity: parseInt(quantity),
+        category,
+      },
+    ]);
+    setName("");
+    setQuantity("");
+  };
+
+  const updateQuantity = (index, delta) => {
+    const updated = [...items];
+    updated[index].quantity += delta;
+    if (updated[index].quantity < 0) updated[index].quantity = 0;
+    setItems(updated);
+  };
+
+  const deleteItem = (index) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const filteredItems = items.filter(
+    (item) =>
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.category.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalItems = items.length;
+  const totalStock = items.reduce((sum, i) => sum + i.quantity, 0);
+
+  if (!user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Card className="p-6 text-center">
+          <h2 className="text-xl mb-4">Login</h2>
+          <Button onClick={login}>Login as Admin</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Stock Control Dashboard</h1>
+        <Button onClick={logout}>Logout</Button>
+      </div>
+
+      {/* Dashboard */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <Card>
+          <CardContent className="p-4">
+            <p>Total Items</p>
+            <h2 className="text-xl font-bold">{totalItems}</h2>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p>Total Stock</p>
+            <h2 className="text-xl font-bold">{totalStock}</h2>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Add Item */}
+      <Card className="mb-4">
+        <CardContent className="p-4 grid gap-2 md:grid-cols-4">
+          <Input
+            placeholder="Item name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input
+            type="number"
+            placeholder="Quantity"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+          />
+          <Input
+            placeholder="Category (e.g. food)"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          />
+          <Button onClick={addItem}>Add</Button>
+        </CardContent>
+      </Card>
+
+      {/* Search */}
+      <Input
+        className="mb-4"
+        placeholder="Search items or categories..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      {/* Items */}
+      <div className="grid gap-3">
+        {filteredItems.map((item, index) => (
+          <Card key={index}>
+            <CardContent className="p-4 flex justify-between items-center">
+              <div>
+                <p className="font-semibold">{item.name}</p>
+                <p className="text-sm">Category: {item.category}</p>
+                <p className="text-sm">Qty: {item.quantity}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => updateQuantity(index, 1)}>+</Button>
+                <Button onClick={() => updateQuantity(index, -1)}>-</Button>
+                <Button variant="destructive" onClick={() => deleteItem(index)}>
+                  Delete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
